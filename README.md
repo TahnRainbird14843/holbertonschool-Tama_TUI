@@ -1,0 +1,1 @@
+This repo is for an independent project using python curses, it will implement a game of chess in the graphical display terminal
