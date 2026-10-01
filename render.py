@@ -56,9 +56,8 @@ class GameState:
         pass
     
     def update_game_state(self, piece_position, move_position):
-        piece_holder = self.game_state[piece_position[0]][piece_position[1]]
-        self.game_state[piece_position[0]][piece_position[1]] = self.game_state[move_position[0]][move_position[1]]
-        self.game_state[move_position[0]][move_position[1]] = piece_holder
+        self.game_state[move_position[0]][move_position[1]] = self.game_state[piece_position[0]][piece_position[1]]
+        self.game_state[piece_position[0]][piece_position[1]] = ' '
     
     def get_input(self, player):
         player_input = input()
@@ -84,7 +83,8 @@ class RenderBoard:
     
     def render_pieces(self, game_state):
         for i in range(8):
-            print(game_state[i])
+            print("{}  {}".format(8 - i, game_state[i]))
+        print("     a    b    c    d    e    f    g    h")
 
 """
 def render_board(stdscr):

@@ -1,4 +1,4 @@
-from helpers import add_tuple
+from helpers import *
 from render import game_state
 
 """
@@ -37,6 +37,13 @@ class Player:
     def validate_player(self, name, value):
         if (value != 1 and value != -1):
             raise TypeError("{} must be in [1, -1]".format(name))
+    
+    def get_piece_at_position(self, position):
+        found_piece = None
+        for piece in self.owned_pieces:
+            if (piece.position[0] == position[0] and piece.position[1] == position[1]):
+                found_piece = piece
+        return found_piece
 
 
 
@@ -68,7 +75,7 @@ class Piece:
         return (type(position) is tuple and len(position) == 2 and
                 0 <= position[0] < 8 and 0 <= position[1] < 8)
 
-    def get_valid_moves(self, position, game_state):
+    def get_valid_moves(self, hero, opponent):
         raise Exception("get_valid_moves needs to be implemented in each subclass")
 
     def update_position(self, new_position):
@@ -111,15 +118,142 @@ class Pawn(Piece):
         if (direction not in [1, -1]):
             raise ValueError("direction of pawn must be either 1 or -1 depending on which player it is owned by")
     
-    def get_valid_moves(self, game_state):
-        moves = []
-        check_move = add_tuple(self.position, (self.direction * 1, 0))
-        if (super().validate_position(check_move)):
-            moves.append((check_move))
-        check_move = add_tuple(self.position, (self.direction * 2, 0))
-        if (super().validate_position(check_move) and not self.has_moved):
-            moves.append((check_move))
-        return(moves)
+    def get_valid_moves(self, hero, opponent):
+        valid_moves = []
+        check_move = add_tuple(self.position, (- self.direction * 1, 0))
+        if (super().validate_position(check_move) and hero.get_piece_at_position(check_move)
+                is None and opponent.get_piece_at_position(check_move) is None):
+            valid_moves.append((check_move))
+            check_move = add_tuple(self.position, (- self.direction * 2, 0))
+            if (super().validate_position(check_move) and hero.get_piece_at_position(check_move)
+                    is None and opponent.get_piece_at_position(check_move) is None and not self.has_moved):
+                valid_moves.append((check_move))
+        captures = [scale_tuple(- self.direction, (1, 1)), scale_tuple(- self.direction, (1, -1))]
+        for move in captures:
+            check_move = add_tuple(self.position, move)
+            if (opponent.get_piece_at_position(check_move) is not None):
+                valid_moves.append(check_move)
+        return(valid_moves)
 
     def update_position(self, new_position):
         self.__init__(new_position, has_moved=True, direction = self.direction)
+
+
+class Rook(Piece):
+    def __init__(self, position):
+        super().__init__(position)
+    
+    def get_valid_moves(self, hero, opponent):
+        move_directions = [(1, 0), (0, 1), (-1, 0), (0, -1)]
+        valid_moves = []
+        for direction in move_directions:
+            check_move = add_tuple(direction, self.position)
+            while (super().validate_position(check_move) and hero.get_piece_at_position(check_move) 
+            is None and opponent.get_piece_at_position(check_move) is None):
+                valid_moves.append((check_move))
+                check_move = add_tuple(direction, check_move)
+            if (opponent.get_piece_at_position is not None):
+                valid_moves.append((check_move))
+        return valid_moves
+    
+    def update_position(self, new_position):
+        self.__init__(new_position)
+
+
+
+class Knight(Piece):
+    def __init__(self, position):
+        super().__init__(position)
+    
+    def get_valid_moves(self, hero, opponent):
+        move_directions = [(1, 2), (2, 1), (-1, 2), (2, -1), (1, -2), (-2, 1), (-1, -2), (-2, -1)]
+        valid_moves = []
+        for direction in move_directions:
+            check_move = add_tuple(direction, self.position)
+            if (super().validate_position(check_move) and hero.get_piece_at_position(check_move)
+            is None):
+                valid_moves.append((check_move))
+        return valid_moves
+    
+    def update_position(self, new_position):
+        self.__init__(new_position)
+
+
+class Bishop(Piece):
+    def __init__(self, position):
+        super().__init__(position)
+    
+    def get_valid_moves(self, hero, opponent):
+        move_directions = [(1, 1), (1, -1), (-1, 1), (-1, -1)]
+        valid_moves = []
+        for direction in move_directions:
+            check_move = add_tuple(direction, self.position)
+            while (super().validate_position(check_move) and hero.get_piece_at_position(check_move)
+            is None and opponent.get_piece_at_position(check_move) is None):
+                valid_moves.append((check_move))
+                check_move = add_tuple(direction, check_move)
+            if (opponent.get_piece_at_position(check_move) is not None):
+                valid_moves.append((check_move))
+        return valid_moves
+    
+    def update_position(self, new_position):
+        self.__init__(new_position)
+
+
+class King(Piece):
+    def __init__(self, position, k_castle=True, q_castle=True):
+        super().__init__(position)
+        self.k_castle = k_castle
+        self.q_castle = q_castle
+    
+    @property
+    def k_castle(self):
+        return self.__k_castle
+    
+    @k_castle.setter
+    def k_castle(self, k_castle):
+        super().validate_boolean("kingside castling - k_castle", k_castle)
+        self.__k_castle = k_castle
+    
+    @property
+    def q_castle(self):
+        return self.__q_castle
+    
+    @q_castle.setter
+    def q_castle(self, q_castle):
+        super().validate_boolean("queenside castling - q_castle", q_castle)
+        self.__q_castle = q_castle
+    
+    def get_valid_moves(self, hero, opponent):
+        move_directions = [(1, 1), (1, 0), (1, -1), (0, -1), (-1, -1), (-1, 0), (-1, 1), (0, 1)]
+        valid_moves = []
+        for direction in move_directions:
+            check_move = add_tuple(direction, self.position)
+            if (super().validate_position(check_move) and hero.get_piece_at_position(check_move)
+            is None):
+                valid_moves.append((check_move))
+        return valid_moves
+    
+    def update_position(self, new_position):
+        self.__init__(new_position, k_castle=False, q_castle=False)
+
+
+class Queen(Piece):
+    def __init__(self, position):
+        super().__init__(position)
+
+    def get_valid_moves(self, hero, opponent):
+        move_directions = [(1, 1), (1, 0), (1, -1), (0, -1), (-1, -1), (-1, 0), (-1, 1), (0, 1)]
+        valid_moves = []
+        for direction in move_directions:
+            check_move = add_tuple(direction, self.position)
+            while (super().validate_position(check_move) and hero.get_piece_at_position(check_move) is None
+            and opponent.get_piece_at_position(check_move) is None):
+                valid_moves.append((check_move))
+                check_move = add_tuple(direction, check_move)
+            if (opponent.get_piece_at_position(check_move) is not None):
+                valid_moves.append((check_move))
+        return valid_moves
+    
+    def update_position(self, new_position):
+        self.__init__(new_position)
