@@ -1,5 +1,4 @@
 from helpers import *
-from render import game_state
 
 """
 This is for creating the different piece classes
@@ -37,6 +36,9 @@ class Player:
     def validate_player(self, name, value):
         if (value != 1 and value != -1):
             raise TypeError("{} must be in [1, -1]".format(name))
+
+    def piece_pos_list(self):
+        return [piece.position for piece in self.owned_pieces]
     
     def get_piece_at_position(self, position):
         found_piece = None
@@ -57,8 +59,9 @@ class Piece:
         This is so that the pawns get their direction specified inherently
         by their color
     """
-    def __init__(self, position):
+    def __init__(self, position, direction=1):
         self.position = position
+        self.direction = direction
     
     @property
     def position(self):
@@ -70,6 +73,19 @@ class Piece:
             raise ValueError("starting position must be a length 2 tuple of",
                             "integers that fits on the chess grid")
         self.__position = position
+
+    @property
+    def direction(self):
+        return self.__direction
+
+    @direction.setter
+    def direction(self, direction):
+        self.validate_direction(direction)
+        self.__direction = direction
+
+    def validate_direction(self, direction):
+        if (direction not in [1, -1]):
+            raise ValueError("direction of pawn must be either 1 or -1 depending on which player it is owned by")
     
     def validate_position(self, position):
         return (type(position) is tuple and len(position) == 2 and
@@ -92,9 +108,9 @@ class Pawn(Piece):
     move on turn 1
     """
     def __init__(self, position, has_moved=False, direction=1):
-        super().__init__(position)
+        super().__init__(position, direction)
         self.has_moved = has_moved
-        self.direction = direction
+        self.en_passant_squares = None
 
     @property
     def has_moved(self):
@@ -104,20 +120,7 @@ class Pawn(Piece):
     def has_moved(self, has_moved):
         super().validate_boolean("pawn - has_moved", has_moved)
         self.__has_moved = has_moved
-    
-    @property
-    def direction(self):
-        return self.__direction
 
-    @direction.setter
-    def direction(self, direction):
-        self.validate_direction(direction)
-        self.__direction = direction
-    
-    def validate_direction(self, direction):
-        if (direction not in [1, -1]):
-            raise ValueError("direction of pawn must be either 1 or -1 depending on which player it is owned by")
-    
     def get_valid_moves(self, hero, opponent):
         valid_moves = []
         check_move = add_tuple(self.position, (- self.direction * 1, 0))
@@ -136,12 +139,12 @@ class Pawn(Piece):
         return(valid_moves)
 
     def update_position(self, new_position):
-        self.__init__(new_position, has_moved=True, direction = self.direction)
+        self.__init__(new_position, has_moved=True, direction = super().direction)
 
 
 class Rook(Piece):
-    def __init__(self, position):
-        super().__init__(position)
+    def __init__(self, position, direction):
+        super().__init__(position, direction)
     
     def get_valid_moves(self, hero, opponent):
         move_directions = [(1, 0), (0, 1), (-1, 0), (0, -1)]
@@ -157,13 +160,13 @@ class Rook(Piece):
         return valid_moves
     
     def update_position(self, new_position):
-        self.__init__(new_position)
+        self.__init__(new_position, super().direction)
 
 
 
 class Knight(Piece):
-    def __init__(self, position):
-        super().__init__(position)
+    def __init__(self, position, direction):
+        super().__init__(position, direction)
     
     def get_valid_moves(self, hero, opponent):
         move_directions = [(1, 2), (2, 1), (-1, 2), (2, -1), (1, -2), (-2, 1), (-1, -2), (-2, -1)]
@@ -176,12 +179,12 @@ class Knight(Piece):
         return valid_moves
     
     def update_position(self, new_position):
-        self.__init__(new_position)
+        self.__init__(new_position, super().direction)
 
 
 class Bishop(Piece):
-    def __init__(self, position):
-        super().__init__(position)
+    def __init__(self, position, direction):
+        super().__init__(position, direction)
     
     def get_valid_moves(self, hero, opponent):
         move_directions = [(1, 1), (1, -1), (-1, 1), (-1, -1)]
@@ -197,33 +200,13 @@ class Bishop(Piece):
         return valid_moves
     
     def update_position(self, new_position):
-        self.__init__(new_position)
+        self.__init__(new_position, super().direction)
 
 
 class King(Piece):
-    def __init__(self, position, k_castle=True, q_castle=True):
-        super().__init__(position)
-        self.k_castle = k_castle
-        self.q_castle = q_castle
-    
-    @property
-    def k_castle(self):
-        return self.__k_castle
-    
-    @k_castle.setter
-    def k_castle(self, k_castle):
-        super().validate_boolean("kingside castling - k_castle", k_castle)
-        self.__k_castle = k_castle
-    
-    @property
-    def q_castle(self):
-        return self.__q_castle
-    
-    @q_castle.setter
-    def q_castle(self, q_castle):
-        super().validate_boolean("queenside castling - q_castle", q_castle)
-        self.__q_castle = q_castle
-    
+    def __init__(self, position, direction):
+        super().__init__(position, direction)
+
     def get_valid_moves(self, hero, opponent):
         move_directions = [(1, 1), (1, 0), (1, -1), (0, -1), (-1, -1), (-1, 0), (-1, 1), (0, 1)]
         valid_moves = []
@@ -235,12 +218,12 @@ class King(Piece):
         return valid_moves
     
     def update_position(self, new_position):
-        self.__init__(new_position, k_castle=False, q_castle=False)
+        self.__init__(new_position, super().direction)
 
 
 class Queen(Piece):
-    def __init__(self, position):
-        super().__init__(position)
+    def __init__(self, position, direction):
+        super().__init__(position, direction)
 
     def get_valid_moves(self, hero, opponent):
         move_directions = [(1, 1), (1, 0), (1, -1), (0, -1), (-1, -1), (-1, 0), (-1, 1), (0, 1)]
@@ -256,4 +239,4 @@ class Queen(Piece):
         return valid_moves
     
     def update_position(self, new_position):
-        self.__init__(new_position)
+        self.__init__(new_position, super().direction)
