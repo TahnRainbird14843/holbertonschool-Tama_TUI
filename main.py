@@ -24,7 +24,7 @@ if __name__ == "__main__":
     while (game_running):
         piece_pos = game.get_piece_input(curr_player)
         piece_to_move = game.get_piece_at_pos(curr_player, piece_pos)
-        move_pos, captured_piece = game.get_move_input(piece_to_move, curr_player, opp_player)
+        move_pos, captured_piece, capture_pos = game.get_move_input(piece_to_move, curr_player, opp_player)
 
         piece_to_move.update_position(move_pos)
         curr_player.update_castling_rights(piece_to_move)
@@ -37,7 +37,7 @@ if __name__ == "__main__":
             opp_player.owned_pieces.remove(captured_piece)
             del captured_piece
 
-        game.update_game_state(piece_pos, move_pos)
+        game.update_game_state(curr_player, piece_to_move, piece_pos, move_pos, capture_pos)
         board.render_pieces(game.game_state)
 
         tmp = curr_player

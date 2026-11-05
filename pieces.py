@@ -79,14 +79,14 @@ class Player:
             self.q_castle = False
             self.k_castle = False
         elif isinstance(piece, Rook):
-            if (self.player * (4 - piece.get_position()[1]) < 0):
+            if (piece.position[1] == 0):
                 self.q_castle = False
             else:
                 self.k_castle = False
 
     def update_en_passant(self, piece, start, end, is_curr):
-        if isinstance(piece, Pawn) and start[1] - end[1] == 2 and is_curr == True:
-            self.en_passant = add_tuple(start, (0, self.player))
+        if isinstance(piece, Pawn) and (abs(start[0] - end[0])) == 2 and is_curr == True:
+            self.en_passant = add_tuple(start, (-self.player, 0))
         else:
             self.en_passant = None
 
@@ -177,7 +177,7 @@ class Pawn(Piece):
         captures = [scale_tuple(- self.direction, (1, 1)), scale_tuple(- self.direction, (1, -1))]
         for move in captures:
             check_move = add_tuple(self.position, move)
-            if (opponent.get_piece_at_position(check_move) is not None or(
+            if (opponent.get_piece_at_position(check_move) is not None or (
                 opponent.en_passant is not None and opponent.en_passant == check_move
             )):
                 valid_moves.append(check_move)
@@ -261,6 +261,23 @@ class King(Piece):
             if (super().validate_position(check_move) and hero.get_piece_at_position(check_move)
             is None):
                 valid_moves.append((check_move))
+
+        if hero.k_castle:
+            for i in range(1, 3):
+                if (opponent.get_piece_at_position(add_tuple(self.position, (0, i)))
+                        and hero.get_piece_at_position(add_tuple(self.position, (0, i)))):
+                    return valid_moves
+                else:
+                    valid_moves.append(add_tuple(self.position, (0, 2)))
+
+        if hero.q_castle:
+            for i in range(1, 4):
+                if (opponent.get_piece_at_position(add_tuple(self.position, (0, -i)))
+                        and hero.get_piece_at_position(add_tuple(self.position, (0, -i)))):
+                    return valid_moves
+                else:
+                    valid_moves.append(add_tuple(self.position, (0, -2)))
+                
         return valid_moves
     
     def update_position(self, new_position):

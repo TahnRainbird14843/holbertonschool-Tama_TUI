@@ -79,9 +79,15 @@ class GameState:
     def get_fen(self, game_state):
         pass
     
-    def update_game_state(self, piece_position, move_position):
+    def update_game_state(self, player, piece, piece_position, move_position, capture_position):
         self.game_state[move_position[0]][move_position[1]] = self.game_state[piece_position[0]][piece_position[1]]
         self.game_state[piece_position[0]][piece_position[1]] = ' '
+        if capture_position is not None and capture_position != move_position:
+            self.game_state[capture_position[0]][capture_position[1]] = ' '
+        if isinstance(piece, King):
+            self.check_castle(player, piece_position, move_position)
+        elif isinstance(piece, Pawn) and move_position[0] in [7, 0]:
+            self.promote_pawn(player, piece, move_position)
     
     def get_piece_input(self, player):
         coord_input = None
@@ -98,8 +104,12 @@ class GameState:
 
         captured_piece = opponent.get_piece_at_position(coord_input)
         if isinstance(piece, Pawn) and opponent.en_passant is not None and coord_input == opponent.en_passant:
-            captured_piece = opponent.get_piece_at_position(add_tuple(coord_input, (0, opponent.player)))
-        return coord_input, captured_piece
+            captured_piece = opponent.get_piece_at_position(add_tuple(coord_input, (-opponent.player, 0)))
+        if captured_piece is not None:
+            capture_pos = captured_piece.position
+        else:
+            capture_pos = None
+        return coord_input, captured_piece, capture_pos
             
     def get_piece_at_pos(self, player, coord):
         for piece in player.owned_pieces:
@@ -125,6 +135,28 @@ class GameState:
             print("invalid input {}".format(coord_input))
             return None
         return coord_input
+
+    def check_castle(self, player, piece_pos, move_pos):
+        if move_pos[1] - piece_pos[1] == 2:
+            rank = piece_pos[0]
+            rook = player.get_piece_at_position((rank, 7))
+            rook.update_position((rank, 5))
+            self.update_game_state((rank, 7), (rank, 5), None)
+
+        elif move_pos[1] - piece_pos[1] == -2:
+            rank = piece_pos[0]
+            rook = player.get_piece_at_position((rank, 0))
+            rook.update_position((rank, 3))
+            self.update_game_state((rank, 0), (rank, 3), None)
+
+    def promote_pawn(self, player, piece, move_pos):
+        player.owned_pieces.remove(piece)
+        new_queen = Queen(move_pos, player.player)
+        player.owned_pieces.append(new_queen)
+        symbol = 'q'
+        if player.player == 1:
+            symbol = 'Q'
+        self.game_state[move_pos[0]][move_pos[1]] = piece_to_unicode_dict[symbol]
 
 
 
@@ -168,6 +200,14 @@ class RenderBoard:
                 if ((i + j) % 2 == 0):
                     for tup in self.get_square((i, j)):
                         self.screen.addstr(tup[1] + 2, tup[0] + 2, " ", curses.color_pair(2))
+
+        for i in range(8):
+            self.screen.addch(8 * self.sq_dimensions[1] + 2, i * self.sq_dimensions[0] + 4, list(coord_dict.keys())[i])
+            self.screen.addch(1, i * self.sq_dimensions[0] + 4, list(coord_dict.keys())[i])
+
+        for i in range(8):
+            self.screen.addch(i * self.sq_dimensions[1] + 3, 0, f"{8 - i}")
+            self.screen.addch(i * self.sq_dimensions[1] + 3, 8 * self.sq_dimensions[0] + 3, f"{8 - i}")
 
         self.screen.refresh()
 
