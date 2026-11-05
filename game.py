@@ -167,6 +167,9 @@ class RenderBoard:
     def __init__(self, stdscreen, sq_dimensions=(5, 3)):
         self.screen = stdscreen
         self.sq_dimensions = sq_dimensions
+        curses.curs_set(0)
+        curses.mousemask(curses.ALL_MOUSE_EVENTS | curses.REPORT_MOUSE_POSITION)
+        print("\033[?1003h\n")
 
     @property
     def screen(self):

@@ -22,7 +22,7 @@ if __name__ == "__main__":
     opp_player = black_player
 
     while (game_running):
-        piece_pos = game.get_piece_input(curr_player)
+        piece_pos = game.get_piece_input(curr_player, board)
         piece_to_move = game.get_piece_at_pos(curr_player, piece_pos)
         move_pos, captured_piece, capture_pos = game.get_move_input(piece_to_move, curr_player, opp_player)
 
