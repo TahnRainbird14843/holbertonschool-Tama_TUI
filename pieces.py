@@ -12,9 +12,12 @@ class Player:
 
     This class also will get the user input for each player
     """
-    def __init__(self, player, pieces):
+    def __init__(self, player, pieces, q_castle=True, k_castle=True, en_passant=None):
         self.player = player
         self.owned_pieces = pieces
+        self.q_castle = q_castle
+        self.k_castle = k_castle
+        self.en_passant = en_passant
     
     @property
     def owned_pieces(self):
@@ -33,6 +36,30 @@ class Player:
         self.validate_player("Player - player", player)
         self.__player = player
 
+    @property
+    def k_castle(self):
+        return self.__k_castle
+
+    @k_castle.setter
+    def k_castle(self, k_castle):
+        self.__k_castle = k_castle
+
+    @property
+    def q_castle(self):
+        return self.__q_castle
+
+    @q_castle.setter
+    def q_castle(self, q_castle):
+        self.__q_castle = q_castle
+
+    @property
+    def en_passant(self):
+        return self.__en_passant
+
+    @en_passant.setter
+    def en_passant(self, en_passant):
+        self.__en_passant = en_passant
+
     def validate_player(self, name, value):
         if (value != 1 and value != -1):
             raise TypeError("{} must be in [1, -1]".format(name))
@@ -46,6 +73,22 @@ class Player:
             if (piece.position[0] == position[0] and piece.position[1] == position[1]):
                 found_piece = piece
         return found_piece
+
+    def update_castling_rights(self, piece):
+        if isinstance(piece, King):
+            self.q_castle = False
+            self.k_castle = False
+        elif isinstance(piece, Rook):
+            if (self.player * (4 - piece.get_position()[1]) < 0):
+                self.q_castle = False
+            else:
+                self.k_castle = False
+
+    def update_en_passant(self, piece, start, end, is_curr):
+        if isinstance(piece, Pawn) and start[1] - end[1] == 2 and is_curr == True:
+            self.en_passant = add_tuple(start, (0, self.player))
+        else:
+            self.en_passant = None
 
 
 
@@ -134,8 +177,11 @@ class Pawn(Piece):
         captures = [scale_tuple(- self.direction, (1, 1)), scale_tuple(- self.direction, (1, -1))]
         for move in captures:
             check_move = add_tuple(self.position, move)
-            if (opponent.get_piece_at_position(check_move) is not None):
+            if (opponent.get_piece_at_position(check_move) is not None or(
+                opponent.en_passant is not None and opponent.en_passant == check_move
+            )):
                 valid_moves.append(check_move)
+
         return(valid_moves)
 
     def update_position(self, new_position):
