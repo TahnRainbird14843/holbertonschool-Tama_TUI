@@ -1,8 +1,10 @@
 import curses
-import math
+import os
 from curses import wrapper
 from helpers import *
 from pieces import *
+from termios import tcflush, TCIFLUSH
+import sys
 
 game_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
 
@@ -33,7 +35,6 @@ class GameState:
     
     @fen.setter
     def fen(self, fen):
-        self.validate_fen(fen)
         self.__fen = fen
     
     @property
@@ -42,14 +43,7 @@ class GameState:
 
     @game_state.setter
     def game_state(self, game_state):
-        self.validate_game(game_state)
         self.__game_state = game_state
-    
-    def validate_fen(self, fen):
-        pass
-    
-    def validate_game(self, game_state):
-        pass
     
     def init_game(self):
         i = j = 0
@@ -89,18 +83,42 @@ class GameState:
         elif isinstance(piece, Pawn) and move_position[0] in [7, 0]:
             self.promote_pawn(player, piece, move_position)
     
-    def get_piece_input(self, player):
+    def get_piece_input(self, player, board):
+        if (player.player == 1):
+            board.screen.addstr(12, 50, "White to move", curses.A_BOLD)
+        else:
+            board.screen.addstr(12, 50, "Black to move", curses.A_BOLD)
+        board.screen.addstr(15, 50, "Piece position:   ")
+        board.screen.addstr(18, 65, "  ")
+        board.screen.refresh()
         coord_input = None
+        prev_input = ""
         while (coord_input is None):
             player_input = input()
             coord_input = self.validate_piece_input(player_input, player)
+            if (coord_input is None):
+                board.screen.addstr(15, 66, "Invalid Input: " + player_input + " " * (abs(len(player_input) - len(prev_input)) + 1))
+                prev_input = player_input
+            else:
+                board.screen.addstr(15, 66, player_input + " " * (len(prev_input) + 15))
+            board.screen.refresh()
         return coord_input
 
-    def get_move_input(self, piece, hero, opponent):
+
+    def get_move_input(self, piece, hero, opponent, board):
+        board.screen.addstr(18, 50, "Move position: ")
+        board.screen.refresh()
         coord_input = None
         while (coord_input is None):
             player_input = input()
             coord_input = self.validate_move_input(player_input, piece, hero, opponent)
+            prev_input = ""
+            if (coord_input is None):
+                board.screen.addstr(18, 65, "Invalid Input: " + player_input + " " * (abs(len(player_input) - len(prev_input)) + 1))
+                prev_input = player_input
+            else:
+                board.screen.addstr(18, 65, player_input + " " * (len(prev_input) + 14))
+            board.screen.refresh()
 
         captured_piece = opponent.get_piece_at_position(coord_input)
         if isinstance(piece, Pawn) and opponent.en_passant is not None and coord_input == opponent.en_passant:
@@ -122,7 +140,6 @@ class GameState:
             return None
         coord_input = (8 - int(player_input[1]), coord_dict[player_input[0]])
         if (not tuple_in_list(coord_input, player.piece_pos_list())):
-            print("invalid input {}".format(coord_input))
             return None
         return coord_input
 
@@ -132,7 +149,6 @@ class GameState:
             return None
         coord_input = (8 - int(player_input[1]), coord_dict[player_input[0]])
         if (not tuple_in_list(coord_input, piece.get_valid_moves(hero, opponent))):
-            print("invalid input {}".format(coord_input))
             return None
         return coord_input
 
@@ -165,6 +181,7 @@ class RenderBoard:
     this is a class which contains the methods to render the board for each game state
     """
     def __init__(self, stdscreen, sq_dimensions=(5, 3)):
+        stdscreen.nodelay(True)
         self.screen = stdscreen
         self.sq_dimensions = sq_dimensions
         curses.curs_set(0)
@@ -229,3 +246,22 @@ class RenderBoard:
                                   game_state[row][col], curses.color_pair((col + row) % 2))
 
         self.screen.refresh()
+
+    def get_piece_input_fancy(self, player, game):
+        pos = (int(3.5 + 3.5 * player.player), 0)
+        while True:
+            square = self.get_square(pos)[0]
+            self.screen.addstr(square[0], square[1], "", curses.A_BLINK)
+            try:
+                key = self.screen.getkey()
+                if key == os.linesep:
+                    break
+                elif str(key) == "KEY_LEFT":
+                    print(key)
+                elif str(key) == "KEY_RIGHT":
+                    pos = add_tuple(pos, (0, 1))
+                    print(key, pos)
+            except Exception as e:
+                pass
+
+

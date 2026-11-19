@@ -90,6 +90,33 @@ class Player:
         else:
             self.en_passant = None
 
+    def get_attacked_squares(self):
+        attacked_squares = []
+        for piece in self.owned_pieces:
+            attacked_squares.append(piece.get_valid_moves)
+
+        return attacked_squares
+
+    def get_king_position(self):
+        for piece in self.owned_pieces:
+            if isinstance(piece, King):
+                return piece.position
+
+    def is_checkmated(self, opponent):
+        if self.is_in_check(opponent):
+            for piece in self.owned_pieces:
+                if piece.get_valid_moves() is not []:
+                    return False
+            return True
+
+        return False
+
+    def is_in_check(self, opponent):
+        king_pos = self.get_king_position()
+        if king_pos in opponent.get_attacked_squares():
+            return True
+        return False
+
 
 
 class Piece:
@@ -182,6 +209,13 @@ class Pawn(Piece):
             )):
                 valid_moves.append(check_move)
 
+        initial_position = self.position
+        for move in valid_moves:
+            self.update_position(move)
+            if hero.is_in_check(opponent):
+                valid_moves.remove(move)
+        self.update_position(initial_position)
+
         return(valid_moves)
 
     def update_position(self, new_position):
@@ -203,11 +237,18 @@ class Rook(Piece):
                 check_move = add_tuple(direction, check_move)
             if (opponent.get_piece_at_position is not None):
                 valid_moves.append((check_move))
+
+        initial_position = self.position
+        for move in valid_moves:
+            self.update_position(move)
+            if hero.is_in_check(opponent):
+                valid_moves.remove(move)
+        self.update_position(initial_position)
+        
         return valid_moves
     
     def update_position(self, new_position):
         self.__init__(new_position, super().direction)
-
 
 
 class Knight(Piece):
@@ -222,6 +263,14 @@ class Knight(Piece):
             if (super().validate_position(check_move) and hero.get_piece_at_position(check_move)
             is None):
                 valid_moves.append((check_move))
+
+        initial_position = self.position
+        for move in valid_moves:
+            self.update_position(move)
+            if hero.is_in_check(opponent):
+                valid_moves.remove(move)
+        self.update_position(initial_position)
+        
         return valid_moves
     
     def update_position(self, new_position):
@@ -243,6 +292,14 @@ class Bishop(Piece):
                 check_move = add_tuple(direction, check_move)
             if (opponent.get_piece_at_position(check_move) is not None):
                 valid_moves.append((check_move))
+
+        initial_position = self.position
+        for move in valid_moves:
+            self.update_position(move)
+            if hero.is_in_check(opponent):
+                valid_moves.remove(move)
+        self.update_position(initial_position)
+
         return valid_moves
     
     def update_position(self, new_position):
@@ -277,7 +334,14 @@ class King(Piece):
                     return valid_moves
                 else:
                     valid_moves.append(add_tuple(self.position, (0, -2)))
-                
+
+        initial_position = self.position
+        for move in valid_moves:
+            self.update_position(move)
+            if hero.is_in_check(opponent):
+                valid_moves.remove(move)
+        self.update_position(initial_position)
+        
         return valid_moves
     
     def update_position(self, new_position):
@@ -299,6 +363,14 @@ class Queen(Piece):
                 check_move = add_tuple(direction, check_move)
             if (opponent.get_piece_at_position(check_move) is not None):
                 valid_moves.append((check_move))
+
+        initial_position = self.position
+        for move in valid_moves:
+            self.update_position(move)
+            if hero.is_in_check(opponent):
+                valid_moves.remove(move)
+        self.update_position(initial_position)
+
         return valid_moves
     
     def update_position(self, new_position):

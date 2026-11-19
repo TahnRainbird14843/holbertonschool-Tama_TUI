@@ -23,8 +23,9 @@ if __name__ == "__main__":
 
     while (game_running):
         piece_pos = game.get_piece_input(curr_player, board)
+        '''piece_pos = board.get_piece_input_fancy(curr_player, game)'''
         piece_to_move = game.get_piece_at_pos(curr_player, piece_pos)
-        move_pos, captured_piece, capture_pos = game.get_move_input(piece_to_move, curr_player, opp_player)
+        move_pos, captured_piece, capture_pos = game.get_move_input(piece_to_move, curr_player, opp_player, board)
 
         piece_to_move.update_position(move_pos)
         curr_player.update_castling_rights(piece_to_move)
